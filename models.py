@@ -56,3 +56,33 @@ class User(ABC):
     def get_permissions(self):
         """Each concrete user type must define its own permissions."""
         raise NotImplementedError
+
+
+class ProfessionalProfile:
+    def __init__(self, summary="", education="", skills=None):
+        self._summary = ""
+        self._education = ""
+        self._skills = []
+        self.update(summary, education, skills or [])
+
+    @property
+    def summary(self):
+        return self._summary
+
+    @property
+    def education(self):
+        return self._education
+
+    @property
+    def skills(self):
+        return tuple(self._skills)
+
+    def update(self, summary, education, skills):
+        if not isinstance(summary, str) or not isinstance(education, str):
+            raise ValueError("Summary and education must be text.")
+        if not all(isinstance(skill, str) and skill.strip() for skill in skills):
+            raise ValueError("Each skill must be a non-empty text value.")
+
+        self._summary = summary.strip()
+        self._education = education.strip()
+        self._skills = [skill.strip() for skill in skills]
