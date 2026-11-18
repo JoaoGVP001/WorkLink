@@ -16,6 +16,16 @@ O projeto usa classes e objetos para representar as partes do sistema. A classe 
 
 ## Versão atual
 
-O sistema está sendo feito em Python. Nesta etapa, a demonstração é pelo console e os dados ficam guardados apenas enquanto o programa está aberto. A interface gráfica com Tkinter está prevista para a próxima parte do trabalho.
+O sistema está sendo feito em Python. A demonstração do backend continua disponível pelo console, e a janela inicial da interface Tkinter é aberta por `app.py`. Os dados ficam guardados apenas enquanto o programa está aberto.
+
+## Abrir a janela do sistema
+
+Com o Python instalado, abra um terminal nesta pasta e execute:
+
+```bash
+python3 app.py
+```
+
+A janela começa com um administrador de demonstração. A opção de selecionar usuário serve para trocar o perfil usado na demonstração; não é um sistema de login. Os dados continuam apenas na memória enquanto o programa está aberto.
 
 **Grupo:** João Guilherme, Arthur, Rafael e Lucas.
