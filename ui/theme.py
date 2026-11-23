@@ -86,6 +86,19 @@ def configure_styles(root):
         "Secondary.TButton",
         background=[("active", "#e2e8f0"), ("pressed", "#cbd5e1")],
     )
+    style.configure(
+        "HeaderLink.TButton",
+        background=dark_blue,
+        foreground="#ffffff",
+        bordercolor=dark_blue,
+        lightcolor=dark_blue,
+        darkcolor=dark_blue,
+        padding=(8, 6),
+    )
+    style.map(
+        "HeaderLink.TButton",
+        background=[("pressed", "#2c517a"), ("active", "#2f5278")],
+    )
     style.configure("User.TCombobox", padding=5)
     style.map(
         "User.TCombobox",

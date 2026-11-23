@@ -7,7 +7,7 @@ from ui.theme import APPLICATION_STATUS_LABELS
 
 class CandidateView(ttk.Frame):
 
-    def __init__(self, parent, service, selected_user, on_user_created):
+    def __init__(self, parent, service, selected_user, on_user_created=None):
         super().__init__(parent, style="App.TFrame")
         self.service = service
         self.candidate = selected_user
@@ -47,13 +47,12 @@ class CandidateView(ttk.Frame):
         name = self.name_entry.get().strip()
         email = self.email_entry.get().strip()
         try:
-            self.candidate = self.service.register_candidate(name, email)
+            candidate = self.service.register_candidate(name, email)
         except ValueError as error:
             messagebox.showerror("Erro de cadastro", str(error))
             return
-        self.on_user_created(self.candidate)
-        self.create_main_interface()
         messagebox.showinfo("Cadastro concluído", "O candidato foi cadastrado.")
+        self.on_user_created(candidate)
 
     def create_main_interface(self):
         for widget in self.winfo_children():

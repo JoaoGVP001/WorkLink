@@ -12,11 +12,10 @@ class AdministratorView(ttk.Frame):
         UserRole.ADMINISTRATOR: "Administrador",
     }
 
-    def __init__(self, parent, service, selected_user, refresh_users):
+    def __init__(self, parent, service, selected_user):
         super().__init__(parent, style="App.TFrame")
         self.service = service
         self.administrator = selected_user
-        self.refresh_users = refresh_users
         self._user_rows = {}
         self._recruiter_options = {}
         self._company_options = {}
@@ -329,7 +328,6 @@ class AdministratorView(ttk.Frame):
         self._refresh_recruiters(user if isinstance(user, Recruiter) else None)
         self._recruiter_selected()
         self._refresh_users()
-        self.refresh_users()
         messagebox.showinfo("Conta cadastrada", "A conta foi cadastrada.")
 
     def _recruiter_selected(self, _event=None):
@@ -382,7 +380,6 @@ class AdministratorView(ttk.Frame):
             user if isinstance(user, Recruiter) else None
         )
         self._recruiter_selected()
-        self.refresh_users()
         messagebox.showinfo("Conta atualizada", "A situação da conta foi atualizada.")
 
     @classmethod

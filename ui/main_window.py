@@ -1,6 +1,4 @@
-"""Main window and navigation for the WorkLink demo application."""
-
-import tkinter as tk
+from datetime import date
 from tkinter import messagebox, ttk
 
 from models import Administrator, Candidate, Recruiter
@@ -8,220 +6,219 @@ from ui.admin_view import AdministratorView
 from ui.candidate_view import CandidateView
 from ui.recruiter_view import RecruiterView
 from ui.theme import configure_styles
+from ui.vacancies_view import VacanciesView
 
 
 class MainWindow:
-    VIEW_DETAILS = {
-        Candidate: ("Candidato", CandidateView),
-        Recruiter: ("Recrutador", RecruiterView),
-        Administrator: ("Administrador", AdministratorView),
-    }
-
-    def __init__(self, root, service, initial_user=None):
+    def __init__(self, root, service):
         self.root = root
         self.service = service
-        self.current_user = initial_user
-        self._user_options = {}
+        self.candidate = None
 
-        configure_styles(self.root)
-        self.root.title("WorkLink - Sistema de Vagas")
-        self.root.geometry("820x560")
-        self.root.minsize(680, 540)
-        self.root.configure(bg="#eef2f7")
-
+        configure_styles(root)
+        root.title("WorkLink - Sistema de Vagas")
+        root.geometry("900x590")
+        root.minsize(680, 540)
         self._build_layout()
-        self.refresh_users(initial_user)
         self.show_home()
 
     def _build_layout(self):
-        self.container = ttk.Frame(self.root, style="App.TFrame")
-        self.container.pack(fill="both", expand=True)
+        container = ttk.Frame(self.root, style="App.TFrame")
+        container.pack(fill="both", expand=True)
 
-        self.header = ttk.Frame(
-            self.container, style="Header.TFrame", padding=(22, 16)
-        )
-        self.header.pack(fill="x")
-
+        header = ttk.Frame(container, style="Header.TFrame", padding=(20, 14))
+        header.pack(fill="x")
+        brand = ttk.Frame(header, style="Header.TFrame")
+        brand.pack(side="left")
+        ttk.Label(brand, text="WorkLink", style="HeaderTitle.TLabel").pack(anchor="w")
         ttk.Label(
-            self.header,
-            text="WorkLink",
-            style="HeaderTitle.TLabel",
+            brand, text="Vagas de emprego e estágio", style="HeaderSubtitle.TLabel"
         ).pack(anchor="w")
-        ttk.Label(
-            self.header,
-            text="Sistema de divulgação de vagas e candidaturas",
-            style="HeaderSubtitle.TLabel",
-        ).pack(anchor="w", pady=(2, 10))
 
-        self.navigation = ttk.Frame(
-            self.container, style="App.TFrame", padding=(22, 12)
+        actions = ttk.Frame(header, style="Header.TFrame")
+        actions.pack(side="right")
+        self.home_button = ttk.Button(
+            actions, text="Voltar às vagas", style="HeaderLink.TButton", command=self.show_home
         )
-        self.navigation.pack(fill="x")
-
-        ttk.Label(
-            self.navigation,
-            text="Usuário da demonstração:",
-            style="Navigation.TLabel",
-        ).pack(side="left")
-        self.user_choice = tk.StringVar()
-        self.user_menu = ttk.Combobox(
-            self.navigation,
-            textvariable=self.user_choice,
-            state="readonly",
-            width=34,
-            style="User.TCombobox",
-        )
-        self.user_menu.pack(side="left", padx=(8, 10))
-        self.user_choice.trace_add("write", self._selection_changed)
-
+        self.home_button.grid(row=0, column=0, padx=(0, 4))
         ttk.Button(
-            self.navigation,
-            text="Atualizar usuários",
-            command=self.refresh_users,
-            style="Secondary.TButton",
-        ).pack(side="left")
+            actions, text="Área do candidato", style="HeaderLink.TButton",
+            command=self.show_candidate_picker,
+        ).grid(row=0, column=1, padx=(0, 4))
         ttk.Button(
-            self.navigation,
-            text="Início",
-            command=self.show_home,
-            style="Secondary.TButton",
-        ).pack(side="right")
+            actions, text="Área da empresa", style="HeaderLink.TButton",
+            command=self.show_company_picker,
+        ).grid(row=0, column=2)
 
-        self.content = ttk.Frame(
-            self.container, style="App.TFrame", padding=(22, 10, 22, 22)
-        )
+        self.content = ttk.Frame(container, style="App.TFrame", padding=(20, 16))
         self.content.pack(fill="both", expand=True)
-
-    def refresh_users(self, selected_user=None):
-        if selected_user is not None:
-            self.current_user = selected_user
-
-        self._user_options.clear()
-        for user in self.service.users:
-            role = self._role_name(user)
-            state = "ativo" if user.active else "inativo"
-            label = f"{user.user_id} - {user.name} ({role}, {state})"
-            self._user_options[label] = user
-
-        selected_label = None
-        for label, user in self._user_options.items():
-            if user is self.current_user:
-                selected_label = label
-
-        self.user_menu["values"] = tuple(self._user_options)
-
-        if selected_label is None and self._user_options:
-            selected_label = next(iter(self._user_options))
-            self.current_user = self._user_options[selected_label]
-
-        if selected_label is None:
-            self.current_user = None
-            self.user_choice.set("Nenhum usuário cadastrado")
-        else:
-            self.user_choice.set(selected_label)
 
     def show_home(self):
         self._clear_content()
-        card = ttk.Frame(self.content, style="Card.TFrame", padding=24)
-        card.pack(fill="both", expand=True)
+        self.home_button.grid_remove()
+        view = VacanciesView(self.content, self.service, self.start_application)
+        view.pack(fill="both", expand=True)
 
-        ttk.Label(
-            card,
-            text="Demonstração do sistema",
-            style="CardTitle.TLabel",
-        ).pack(anchor="w", pady=(0, 12))
-
-        if self.current_user is None:
-            ttk.Label(
-                card,
-                text="Cadastre um candidato ou atualize a lista de usuários.",
-                wraplength=620,
-                justify="left",
-                style="CardBody.TLabel",
-            ).pack(anchor="w", pady=(0, 12))
+    def show_candidate_picker(self, vacancy=None):
+        if vacancy is None:
+            card = self._card("Área do candidato")
+            action = "Abrir área"
         else:
-            role = self._role_name(self.current_user)
-            state = "Ativa" if self.current_user.active else "Inativa"
+            card = self._card("Selecione uma conta")
             ttk.Label(
-                card,
-                text=f"Perfil selecionado: {self.current_user.name}",
-                style="CardBody.TLabel",
-            ).pack(anchor="w", pady=(4, 6))
-            ttk.Label(
-                card,
-                text=f"Tipo de perfil: {role}",
-                style="CardBody.TLabel",
-            ).pack(anchor="w", pady=4)
-            ttk.Label(
-                card,
-                text=f"Situação da conta: {state}",
-                style="CardBody.TLabel",
-            ).pack(anchor="w", pady=4)
+                card, text=f"Vaga selecionada: {vacancy.title}", style="CardBody.TLabel",
+                wraplength=550,
+            ).pack(anchor="w", pady=(0, 12))
+            action = "Continuar"
 
-            ttk.Button(
-                card,
-                text=f"Abrir área de {role.lower()}",
-                command=self.open_selected_area,
-                style="Accent.TButton",
-            ).pack(anchor="w", pady=(18, 8))
+        candidates = [user for user in self.service.users if isinstance(user, Candidate)]
+        if candidates:
+            self._account_picker(
+                card, candidates, action,
+                lambda candidate: self._select_candidate(candidate, vacancy),
+                selected_user=self.candidate,
+            )
 
         ttk.Button(
             card,
             text="Cadastrar candidato",
-            command=self.open_candidate_registration,
-            style="Secondary.TButton",
-        ).pack(anchor="w", pady=4)
+            style="Secondary.TButton" if candidates else "Accent.TButton",
+            command=lambda: self._show_candidate_registration(vacancy),
+        ).pack(anchor="w", pady=(12, 0))
 
+    def _show_candidate_registration(self, vacancy):
+        self._clear_content()
+        view = CandidateView(
+            self.content, self.service, None,
+            lambda candidate: self._select_candidate(candidate, vacancy),
+        )
+        view.pack(fill="both", expand=True)
+
+    def _select_candidate(self, candidate, vacancy):
+        if not self._ensure_active(candidate):
+            return
+
+        self.candidate = candidate
+        if vacancy is None:
+            self._show_candidate_area()
+        else:
+            self._show_confirmation(candidate, vacancy)
+
+    def _show_candidate_area(self, show_applications=False):
+        self._clear_content()
+        view = CandidateView(self.content, self.service, self.candidate)
+        view.pack(fill="both", expand=True)
+        if show_applications:
+            view.notebook.select(view.applications_frame)
+
+    def start_application(self, vacancy):
+        if self.candidate is not None and self.candidate.active:
+            self._show_confirmation(self.candidate, vacancy)
+        else:
+            self.show_candidate_picker(vacancy)
+
+    def _show_confirmation(self, candidate, vacancy):
+        card = self._card("Confirmar candidatura")
+        for text in (
+            vacancy.title,
+            vacancy.company.name,
+            f"Candidato: {candidate.name}",
+        ):
+            ttk.Label(
+                card, text=text, style="CardBody.TLabel", wraplength=550
+            ).pack(anchor="w", pady=(0, 6))
+
+        actions = ttk.Frame(card, style="Card.TFrame")
+        actions.pack(anchor="w", pady=(10, 0))
+        ttk.Button(
+            actions, text="Enviar candidatura", style="Accent.TButton",
+            command=lambda: self._confirm_application(candidate, vacancy),
+        ).pack(side="left")
+        ttk.Button(
+            actions, text="Cancelar", style="Secondary.TButton", command=self.show_home
+        ).pack(side="left", padx=(8, 0))
+
+    def _confirm_application(self, candidate, vacancy):
+        try:
+            candidate.apply_to(vacancy, date.today())
+        except (PermissionError, ValueError) as error:
+            messagebox.showerror("Candidatura não enviada", str(error), parent=self.root)
+            return
+
+        self._show_candidate_area(show_applications=True)
+        messagebox.showinfo(
+            "Candidatura enviada", f"Sua candidatura para {vacancy.title} foi enviada.",
+            parent=self.root,
+        )
+
+    def show_company_picker(self):
+        card = self._card("Área da empresa")
+        users = [
+            user for user in self.service.users if isinstance(user, (Administrator, Recruiter))
+        ]
+        self._account_picker(card, users, "Abrir área", self._show_company_area)
         ttk.Label(
-            card,
-            text=(
-                "A seleção de usuário serve para demonstrar os perfis. "
-                "Não é um sistema de login. Os dados ficam na memória e "
-                "são apagados quando o programa é fechado."
-            ),
-            wraplength=620,
-            justify="left",
+            card, text="Escolha uma conta de demonstração para abrir a área.",
             style="CardInfo.TLabel",
-        ).pack(anchor="w", pady=(22, 0))
+        ).pack(anchor="w", pady=(12, 0))
 
-    def open_selected_area(self):
-        if self.current_user is None:
-            messagebox.showinfo(
-                "WorkLink", "Selecione um usuário para abrir a área."
+    def _show_company_area(self, user):
+        if not self._ensure_active(user):
+            return
+        self._clear_content()
+        view_class = AdministratorView if isinstance(user, Administrator) else RecruiterView
+        view_class(self.content, self.service, user).pack(fill="both", expand=True)
+
+    def _account_picker(self, card, users, action, on_select, selected_user=None):
+        if not users:
+            ttk.Label(card, text="Nenhuma conta disponível.", style="CardBody.TLabel").pack(
+                anchor="w"
             )
             return
 
-        try:
-            self.current_user.ensure_active()
-        except PermissionError:
-            messagebox.showerror("WorkLink", "Essa conta está inativa.")
-            return
+        picker = ttk.Combobox(
+            card,
+            values=[self._account_label(user) for user in users],
+            state="readonly",
+            width=42,
+            style="User.TCombobox",
+        )
+        picker.current(users.index(selected_user) if selected_user in users else 0)
+        picker.pack(anchor="w", pady=(0, 10))
+        ttk.Button(
+            card, text=action, style="Accent.TButton",
+            command=lambda: on_select(users[picker.current()]),
+        ).pack(anchor="w")
 
-        _, view_class = self.VIEW_DETAILS[type(self.current_user)]
-        self._open_profile_view(view_class, self.current_user)
-
-    def open_candidate_registration(self):
-        self._open_profile_view(CandidateView, None)
-
-    def _open_profile_view(self, view_class, user):
+    def _card(self, title):
         self._clear_content()
-        view = view_class(self.content, self.service, user, self.refresh_users)
-        view.pack(fill="both", expand=True)
-
-    def _selection_changed(self, *_args):
-        label = self.user_choice.get()
-        selected_user = self._user_options.get(label)
-        if selected_user is not None and selected_user is not self.current_user:
-            self.current_user = selected_user
-            self.show_home()
+        card = ttk.Frame(self.content, style="Card.TFrame", padding=20)
+        card.pack(fill="both", expand=True)
+        ttk.Label(card, text=title, style="CardTitle.TLabel").pack(
+            anchor="w", pady=(0, 12)
+        )
+        return card
 
     def _clear_content(self):
-        for widget in self.content.winfo_children():
-            widget.destroy()
+        self.home_button.grid()
+        for child in self.content.winfo_children():
+            child.destroy()
+
+    def _ensure_active(self, user):
+        try:
+            user.ensure_active()
+        except PermissionError:
+            messagebox.showerror("Conta inativa", "Essa conta está inativa.", parent=self.root)
+            return False
+        return True
 
     @staticmethod
-    def _role_name(user):
-        for user_type, details in MainWindow.VIEW_DETAILS.items():
-            if isinstance(user, user_type):
-                return details[0]
-        return "Usuário"
+    def _account_label(user):
+        roles = {
+            Administrator: "Administrador",
+            Recruiter: "Recrutador",
+            Candidate: "Candidato",
+        }
+        role = roles[type(user)]
+        state = "" if user.active else " • inativo"
+        return f"{user.name} ({role}{state}) · {user.user_id}"

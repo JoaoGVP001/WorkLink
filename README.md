@@ -1,31 +1,29 @@
-# Worklink
+# WorkLink
 
-O Worklink é um trabalho da disciplina Programação Orientada a Objetos I, no IFC Campus Concórdia. A ideia é criar um sistema simples para divulgar vagas de emprego e permitir que candidatos se inscrevam.
+O WorkLink é um projeto da disciplina de Programação Orientada a Objetos I do IFC Campus Concórdia. O sistema permite divulgar vagas de emprego e estágio, receber inscrições e acompanhar o resultado das candidaturas.
 
-## Como funciona
+## Como executar
 
-- **Candidato:** monta seu perfil profissional, procura vagas e acompanha suas candidaturas.
-- **Recrutador:** publica vagas da empresa e avalia as candidaturas recebidas.
-- **Administrador:** cadastra empresas e contas de recrutadores e administra os vínculos entre eles.
+Com Python 3 e Tkinter disponíveis, abra um terminal na pasta do projeto e rode `python3 app.py`.
 
-Cada candidatura tem uma situação, como enviada, em análise, aprovada, rejeitada ou cancelada. O sistema também verifica regras como o prazo da vaga e a inscrição duplicada do mesmo candidato.
+A tela inicial exibe duas vagas de exemplo com inscrições até **31/01/2027**. A escolha de contas serve para demonstrar os perfis. Os dados ficam em memória durante a execução.
 
-## O que estamos aprendendo
+## O que cada perfil pode fazer
 
-O projeto usa classes e objetos para representar as partes do sistema. A classe `User` é abstrata e serve de base para os tipos de usuário. Cada tipo tem permissões próprias. Também usamos propriedades para controlar o acesso aos dados e relações entre candidatos, perfis, empresas, vagas e candidaturas.
+- **Candidato** — consulta vagas, edita o perfil profissional, envia candidaturas e acompanha ou cancela inscrições pendentes.
+- **Recrutador** — cadastra, edita e encerra vagas da própria empresa, exclui vagas sem inscrições e avalia candidaturas.
+- **Administrador** — cadastra empresas e contas, vincula recrutadores a empresas e gerencia a situação das contas.
 
-## Versão atual
+## Demonstração rápida
 
-O sistema está sendo feito em Python. A demonstração do backend continua disponível pelo console, e a janela inicial da interface Tkinter é aberta por `app.py`. Os dados ficam guardados apenas enquanto o programa está aberto.
+1. Selecione uma vaga e clique em **Quero me candidatar**. Cadastre um candidato e confirme a inscrição.
+2. Abra a **Área da empresa**, escolha **João Teste** e avalie a inscrição na aba **Candidaturas**.
+3. Volte à **Área do candidato** e confira a nova situação em **Minhas Candidaturas**.
 
-## Abrir a janela do sistema
+## Organização do código
 
-Com o Python instalado, abra um terminal nesta pasta e execute:
-
-```bash
-python3 app.py
-```
-
-A janela começa com um administrador de demonstração. A opção de selecionar usuário serve para trocar o perfil usado na demonstração; não é um sistema de login. Os dados continuam apenas na memória enquanto o programa está aberto.
+- `app.py` abre a interface. A pasta `ui` reúne as telas do Tkinter.
+- `models.py` e `services.py` concentram as classes e as regras, como o prazo da vaga e o bloqueio de inscrições duplicadas. A classe abstrata `User` define o método de permissões que cada perfil implementa.
+- `main.py` mantém a demonstração da Parte 2 pelo console. Para rodar, use `python3 main.py`.
 
 **Grupo:** João Guilherme, Arthur, Rafael e Lucas.

@@ -13,11 +13,10 @@ class RecruiterView(ttk.Frame):
         VacancyStatus.CLOSED: "Encerrada",
     }
 
-    def __init__(self, parent, service, selected_user, on_user_created):
+    def __init__(self, parent, service, selected_user):
         super().__init__(parent, style="App.TFrame")
         self.service = service
         self.recruiter = selected_user
-        self.on_user_created = on_user_created
         self._vacancy_rows = {}
         self._application_rows = {}
         self._selected_vacancy = None
