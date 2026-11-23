@@ -3,20 +3,11 @@
 from datetime import date, datetime
 from tkinter import messagebox, ttk
 
-from enums import ApplicationStatus, VacancyStatus
+from enums import VacancyStatus
+from ui.theme import APPLICATION_STATUS_LABELS
 
 
 class RecruiterView(ttk.Frame):
-    """Allows a recruiter to manage company vacancies and applications."""
-
-    APPLICATION_STATUS_LABELS = {
-        ApplicationStatus.SENT: "Enviada",
-        ApplicationStatus.UNDER_REVIEW: "Em análise",
-        ApplicationStatus.APPROVED: "Aprovada",
-        ApplicationStatus.REJECTED: "Rejeitada",
-        ApplicationStatus.CANCELLED: "Cancelada",
-    }
-
     VACANCY_STATUS_LABELS = {
         VacancyStatus.OPEN: "Aberta",
         VacancyStatus.CLOSED: "Encerrada",
@@ -230,6 +221,7 @@ class RecruiterView(ttk.Frame):
         ).pack(side="right")
 
     def _refresh_vacancies(self):
+        self._clear_vacancy_form()
         for item in self.vacancy_tree.get_children():
             self.vacancy_tree.delete(item)
         self._vacancy_rows.clear()
@@ -252,6 +244,8 @@ class RecruiterView(ttk.Frame):
             )
 
     def _refresh_applications(self):
+        self.application_status["values"] = ()
+        self.application_status.set("")
         for item in self.application_tree.get_children():
             self.application_tree.delete(item)
         self._application_rows.clear()
@@ -274,13 +268,14 @@ class RecruiterView(ttk.Frame):
                         vacancy.title,
                         candidate.email,
                         application.registered_on.isoformat(),
-                        self.APPLICATION_STATUS_LABELS[application.status],
+                        APPLICATION_STATUS_LABELS[application.status],
                     ),
                 )
 
     def _vacancy_selected(self, _event=None):
         selection = self.vacancy_tree.selection()
         if not selection:
+            self._selected_vacancy = None
             return
         vacancy = self._vacancy_rows.get(selection[0])
         if vacancy is None:
@@ -295,23 +290,9 @@ class RecruiterView(ttk.Frame):
 
     def _application_selected(self, _event=None):
         selection = self.application_tree.selection()
-        if not selection:
-            return
-        application = self._application_rows.get(selection[0])
-        if application is None:
-            return
-
-        allowed = {
-            ApplicationStatus.SENT: (
-                ApplicationStatus.UNDER_REVIEW,
-                ApplicationStatus.REJECTED,
-            ),
-            ApplicationStatus.UNDER_REVIEW: (
-                ApplicationStatus.APPROVED,
-                ApplicationStatus.REJECTED,
-            ),
-        }.get(application.status, ())
-        labels = [self.APPLICATION_STATUS_LABELS[status] for status in allowed]
+        application = self._application_rows.get(selection[0]) if selection else None
+        allowed = application.review_statuses if application is not None else ()
+        labels = [APPLICATION_STATUS_LABELS[status] for status in allowed]
         self.application_status["values"] = tuple(labels)
         self.application_status.set(labels[0] if labels else "")
 
@@ -327,7 +308,6 @@ class RecruiterView(ttk.Frame):
         except (ValueError, PermissionError) as error:
             self._show_error(error)
             return
-        self._clear_vacancy_form()
         self._refresh_vacancies()
         self._refresh_applications()
         messagebox.showinfo(
@@ -372,21 +352,15 @@ class RecruiterView(ttk.Frame):
         except (ValueError, PermissionError) as error:
             self._show_error(error)
             return
-        self._clear_vacancy_form()
         self._refresh_vacancies()
         self._refresh_applications()
+        messagebox.showinfo("Vaga encerrada", "A vaga foi encerrada.")
 
     def _delete_vacancy(self):
         vacancy = self._get_selected_vacancy(
             "Excluir vaga", "Selecione uma vaga na lista."
         )
         if vacancy is None:
-            return
-        if vacancy.applications:
-            messagebox.showerror(
-                "Operação não realizada",
-                "A vaga possui candidaturas e não pode ser excluída.",
-            )
             return
         if not messagebox.askyesno(
             "Excluir vaga",
@@ -398,9 +372,9 @@ class RecruiterView(ttk.Frame):
         except (ValueError, PermissionError) as error:
             self._show_error(error)
             return
-        self._clear_vacancy_form()
         self._refresh_vacancies()
         self._refresh_applications()
+        messagebox.showinfo("Vaga excluída", "A vaga foi excluída.")
 
     def _review_application(self):
         selection = self.application_tree.selection()
@@ -418,7 +392,7 @@ class RecruiterView(ttk.Frame):
         new_status = next(
             (
                 status
-                for status, status_label in self.APPLICATION_STATUS_LABELS.items()
+                for status, status_label in APPLICATION_STATUS_LABELS.items()
                 if status_label == label
             ),
             None,
@@ -435,6 +409,7 @@ class RecruiterView(ttk.Frame):
             self._show_error(error)
             return
         self._refresh_applications()
+        self.application_tree.selection_set(selection[0])
         messagebox.showinfo(
             "Candidatura avaliada",
             "A situação da candidatura foi atualizada.",

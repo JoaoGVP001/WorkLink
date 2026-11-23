@@ -1,5 +1,3 @@
-"""Starts the WorkLink graphical interface."""
-
 from tkinter import Tk
 
 from services import WorklinkService

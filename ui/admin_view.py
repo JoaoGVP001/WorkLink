@@ -7,18 +7,16 @@ from models import Administrator, Recruiter
 
 
 class AdministratorView(ttk.Frame):
-    """Allows an administrator to manage companies and privileged accounts."""
-
     ROLE_LABELS = {
         UserRole.RECRUITER: "Recrutador",
         UserRole.ADMINISTRATOR: "Administrador",
     }
 
-    def __init__(self, parent, service, selected_user, on_user_created):
+    def __init__(self, parent, service, selected_user, refresh_users):
         super().__init__(parent, style="App.TFrame")
         self.service = service
         self.administrator = selected_user
-        self.on_user_created = on_user_created
+        self.refresh_users = refresh_users
         self._user_rows = {}
         self._recruiter_options = {}
         self._company_options = {}
@@ -101,40 +99,42 @@ class AdministratorView(ttk.Frame):
 
         account = ttk.Frame(tab, style="Card.TFrame", padding=12)
         account.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+        account.columnconfigure(1, weight=1)
         ttk.Label(
             account, text="Cadastrar conta privilegiada", style="CardTitle.TLabel"
-        ).pack(anchor="w", pady=(0, 8))
-        ttk.Label(account, text="Nome", style="CardBody.TLabel").pack(
-            anchor="w"
+        ).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 8))
+        ttk.Label(account, text="Nome", style="CardBody.TLabel").grid(
+            row=1, column=0, sticky="w", padx=(0, 8)
         )
-        self.account_name = ttk.Entry(account)
-        self.account_name.pack(fill="x", pady=(3, 8))
-        ttk.Label(account, text="E-mail", style="CardBody.TLabel").pack(
-            anchor="w"
+        self.account_name = ttk.Entry(account, width=1)
+        self.account_name.grid(row=1, column=1, sticky="ew", pady=4)
+        ttk.Label(account, text="E-mail", style="CardBody.TLabel").grid(
+            row=2, column=0, sticky="w", padx=(0, 8)
         )
-        self.account_email = ttk.Entry(account)
-        self.account_email.pack(fill="x", pady=(3, 8))
-        ttk.Label(account, text="Tipo de conta", style="CardBody.TLabel").pack(
-            anchor="w"
+        self.account_email = ttk.Entry(account, width=1)
+        self.account_email.grid(row=2, column=1, sticky="ew", pady=4)
+        ttk.Label(account, text="Tipo de conta", style="CardBody.TLabel").grid(
+            row=3, column=0, sticky="w", padx=(0, 8)
         )
         self.role_choice = ttk.Combobox(
             account,
             state="readonly",
             values=tuple(self.ROLE_LABELS.values()),
+            width=1,
         )
-        self.role_choice.pack(fill="x", pady=(3, 8))
+        self.role_choice.grid(row=3, column=1, sticky="ew", pady=4)
         self.role_choice.set(self.ROLE_LABELS[UserRole.RECRUITER])
         ttk.Label(
-            account, text="Empresa do recrutador (opcional)", style="CardBody.TLabel"
-        ).pack(anchor="w")
-        self.new_recruiter_company = ttk.Combobox(account, state="readonly")
-        self.new_recruiter_company.pack(fill="x", pady=(3, 10))
+            account, text="Empresa (opcional)", style="CardBody.TLabel"
+        ).grid(row=4, column=0, sticky="w", padx=(0, 8))
+        self.new_recruiter_company = ttk.Combobox(account, state="readonly", width=1)
+        self.new_recruiter_company.grid(row=4, column=1, sticky="ew", pady=4)
         ttk.Button(
             account,
             text="Cadastrar conta",
             command=self._create_privileged_account,
             style="Accent.TButton",
-        ).pack(anchor="w")
+        ).grid(row=5, column=0, columnspan=2, sticky="w", pady=(8, 0))
 
         link = ttk.Frame(tab, style="Card.TFrame", padding=12)
         link.grid(row=0, column=1, sticky="nsew")
@@ -325,9 +325,11 @@ class AdministratorView(ttk.Frame):
         self.account_name.delete(0, "end")
         self.account_email.delete(0, "end")
         self.new_recruiter_company.set("")
+        self._refresh_companies()
         self._refresh_recruiters(user if isinstance(user, Recruiter) else None)
+        self._recruiter_selected()
         self._refresh_users()
-        self.on_user_created(user)
+        self.refresh_users()
         messagebox.showinfo("Conta cadastrada", "A conta foi cadastrada.")
 
     def _recruiter_selected(self, _event=None):
@@ -379,6 +381,9 @@ class AdministratorView(ttk.Frame):
         self._refresh_recruiters(
             user if isinstance(user, Recruiter) else None
         )
+        self._recruiter_selected()
+        self.refresh_users()
+        messagebox.showinfo("Conta atualizada", "A situação da conta foi atualizada.")
 
     @classmethod
     def _role_name(cls, user):

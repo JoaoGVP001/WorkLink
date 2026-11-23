@@ -57,7 +57,6 @@ class User(ABC):
 
     @abstractmethod
     def get_permissions(self):
-        """Each concrete user type must define its own permissions."""
         raise NotImplementedError
 
 
@@ -391,6 +390,14 @@ class Application:
     def status(self):
         return self._status
 
+    @property
+    def review_statuses(self):
+        if self._status == ApplicationStatus.SENT:
+            return (ApplicationStatus.UNDER_REVIEW, ApplicationStatus.REJECTED)
+        if self._status == ApplicationStatus.UNDER_REVIEW:
+            return (ApplicationStatus.APPROVED, ApplicationStatus.REJECTED)
+        return ()
+
     def cancel(self, candidate):
         candidate.ensure_active()
         if candidate is not self._candidate:
@@ -407,10 +414,6 @@ class Application:
         if recruiter.company is not self._vacancy.company:
             raise PermissionError("Only a recruiter from the vacancy's company can review it.")
 
-        allowed_changes = {
-            ApplicationStatus.SENT: {ApplicationStatus.UNDER_REVIEW, ApplicationStatus.REJECTED},
-            ApplicationStatus.UNDER_REVIEW: {ApplicationStatus.APPROVED, ApplicationStatus.REJECTED},
-        }
-        if new_status not in allowed_changes.get(self._status, set()):
+        if new_status not in self.review_statuses:
             raise ValueError("This application status change is not allowed.")
         self._status = new_status

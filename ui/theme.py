@@ -2,6 +2,17 @@
 
 from tkinter import ttk
 
+from enums import ApplicationStatus
+
+
+APPLICATION_STATUS_LABELS = {
+    ApplicationStatus.SENT: "Enviada",
+    ApplicationStatus.UNDER_REVIEW: "Em análise",
+    ApplicationStatus.APPROVED: "Aprovada",
+    ApplicationStatus.REJECTED: "Rejeitada",
+    ApplicationStatus.CANCELLED: "Cancelada",
+}
+
 
 def configure_styles(root):
     style = ttk.Style(root)

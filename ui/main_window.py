@@ -1,34 +1,20 @@
 """Main window and navigation for the WorkLink demo application."""
 
-import importlib
 import tkinter as tk
-from tkinter import messagebox
-from tkinter import ttk
+from tkinter import messagebox, ttk
 
 from models import Administrator, Candidate, Recruiter
+from ui.admin_view import AdministratorView
+from ui.candidate_view import CandidateView
+from ui.recruiter_view import RecruiterView
 from ui.theme import configure_styles
 
 
 class MainWindow:
-    """Shows the selected demo user and opens that user's screen.
-
-    Profile screens should export a class named CandidateView,
-    RecruiterView, or AdministratorView. Each class receives:
-
-        (parent, service, selected_user, on_user_created)
-
-    CandidateView also accepts None as selected_user so it can show the
-    candidate registration form.
-    """
-
     VIEW_DETAILS = {
-        Candidate: ("Candidato", "ui.candidate_view", "CandidateView"),
-        Recruiter: ("Recrutador", "ui.recruiter_view", "RecruiterView"),
-        Administrator: (
-            "Administrador",
-            "ui.admin_view",
-            "AdministratorView",
-        ),
+        Candidate: ("Candidato", CandidateView),
+        Recruiter: ("Recrutador", RecruiterView),
+        Administrator: ("Administrador", AdministratorView),
     }
 
     def __init__(self, root, service, initial_user=None):
@@ -40,7 +26,7 @@ class MainWindow:
         configure_styles(self.root)
         self.root.title("WorkLink - Sistema de Vagas")
         self.root.geometry("820x560")
-        self.root.minsize(680, 460)
+        self.root.minsize(680, 540)
         self.root.configure(bg="#eef2f7")
 
         self._build_layout()
@@ -86,7 +72,6 @@ class MainWindow:
             style="User.TCombobox",
         )
         self.user_menu.pack(side="left", padx=(8, 10))
-        self.user_menu.bind("<<ComboboxSelected>>", self._selection_changed)
         self.user_choice.trace_add("write", self._selection_changed)
 
         ttk.Button(
@@ -108,7 +93,6 @@ class MainWindow:
         self.content.pack(fill="both", expand=True)
 
     def refresh_users(self, selected_user=None):
-        """Reloads the user menu after a screen creates an account."""
         if selected_user is not None:
             self.current_user = selected_user
 
@@ -207,66 +191,22 @@ class MainWindow:
             )
             return
 
-        self._open_profile_view(self.current_user)
+        try:
+            self.current_user.ensure_active()
+        except PermissionError:
+            messagebox.showerror("WorkLink", "Essa conta está inativa.")
+            return
+
+        _, view_class = self.VIEW_DETAILS[type(self.current_user)]
+        self._open_profile_view(view_class, self.current_user)
 
     def open_candidate_registration(self):
-        self._open_profile_view(None, role=Candidate)
+        self._open_profile_view(CandidateView, None)
 
-    def _open_profile_view(self, user, role=None):
-        if role is None:
-            role = type(user)
-
-        details = self.VIEW_DETAILS.get(role)
-        if details is None:
-            messagebox.showerror("WorkLink", "Esse perfil não é reconhecido.")
-            return
-
-        role_name, module_name, class_name = details
-        try:
-            module = importlib.import_module(module_name)
-        except ModuleNotFoundError as error:
-            if error.name != module_name:
-                raise
-            self._show_screen_pending(role_name, module_name)
-            return
-
-        view_class = getattr(module, class_name, None)
-        if view_class is None:
-            messagebox.showerror(
-                "Tela incompleta",
-                f"{module_name} precisa declarar a classe {class_name}.",
-            )
-            return
-
+    def _open_profile_view(self, view_class, user):
         self._clear_content()
         view = view_class(self.content, self.service, user, self.refresh_users)
         view.pack(fill="both", expand=True)
-
-    def _show_screen_pending(self, role_name, module_name):
-        self._clear_content()
-        card = ttk.Frame(self.content, style="Card.TFrame", padding=24)
-        card.pack(fill="both", expand=True)
-        ttk.Label(
-            card,
-            text=f"Área de {role_name.lower()}",
-            style="CardTitle.TLabel",
-        ).pack(anchor="w", pady=(0, 12))
-        ttk.Label(
-            card,
-            text=(
-                f"Esta tela será carregada quando o arquivo "
-                f"{module_name.replace('.', '/')}.py for adicionado."
-            ),
-            wraplength=620,
-            justify="left",
-            style="CardBody.TLabel",
-        ).pack(anchor="w")
-        ttk.Button(
-            card,
-            text="Voltar ao início",
-            command=self.show_home,
-            style="Secondary.TButton",
-        ).pack(anchor="w", pady=(16, 0))
 
     def _selection_changed(self, *_args):
         label = self.user_choice.get()

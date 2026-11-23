@@ -2,109 +2,69 @@ from datetime import date
 import tkinter as tk
 from tkinter import messagebox, ttk
 
-from models import Candidate
+from ui.theme import APPLICATION_STATUS_LABELS
 
 
-class CandidateView(tk.Frame):
+class CandidateView(ttk.Frame):
 
-    def __init__(self, parent, service, candidate=None):
-        super().__init__(parent)
+    def __init__(self, parent, service, selected_user, on_user_created):
+        super().__init__(parent, style="App.TFrame")
         self.service = service
-        self.candidate = candidate
+        self.candidate = selected_user
+        self.on_user_created = on_user_created
 
-        self.pack(fill=tk.BOTH, expand=True)
-        self.create_widgets()
-
-    def create_widgets(self):
-        if not self.candidate:
-            self.create_auth_widgets()
+        if self.candidate is None:
+            self.create_registration_form()
         else:
             self.create_main_interface()
 
-    def create_auth_widgets(self):
-        for widget in self.winfo_children():
-            widget.destroy()
+    def create_registration_form(self):
+        frame = ttk.Frame(self, style="Card.TFrame", padding=20)
+        frame.pack(fill=tk.BOTH, expand=True)
 
-        frame = ttk.LabelFrame(self, text="Identificação do Candidato", padding=20)
-        frame.pack(padx=20, pady=20, fill=tk.BOTH, expand=True)
+        ttk.Label(
+            frame, text="Cadastrar candidato", style="CardTitle.TLabel"
+        ).grid(row=0, column=0, columnspan=2, sticky=tk.W, pady=(0, 10))
 
-        ttk.Label(frame, text="Nome:").grid(row=0, column=0, sticky=tk.W, pady=5)
-        self.name_entry = ttk.Entry(frame, width=35)
-        self.name_entry.grid(row=0, column=1, pady=5, padx=5)
-
-        ttk.Label(frame, text="E-mail:").grid(row=1, column=0, sticky=tk.W, pady=5)
-        self.email_entry = ttk.Entry(frame, width=35)
-        self.email_entry.grid(row=1, column=1, pady=5, padx=5)
-
-        btn_register = ttk.Button(
-            frame, text="Cadastrar Novo Candidato", command=self.handle_register
+        ttk.Label(frame, text="Nome", style="CardBody.TLabel").grid(
+            row=1, column=0, sticky=tk.W, pady=5
         )
-        btn_register.grid(row=2, column=0, columnspan=2, pady=15)
+        self.name_entry = ttk.Entry(frame, width=35)
+        self.name_entry.grid(row=1, column=1, pady=5, padx=5)
 
-        existing_candidates = [
-            u for u in self.service.users if isinstance(u, Candidate)
-        ]
-        if existing_candidates:
-            ttk.Separator(frame, orient=tk.HORIZONTAL).grid(
-                row=3, column=0, columnspan=2, sticky="ew", pady=15
-            )
-            ttk.Label(frame, text="Ou selecione um candidato existente:").grid(
-                row=4, column=0, columnspan=2, sticky=tk.W, pady=5
-            )
+        ttk.Label(frame, text="E-mail", style="CardBody.TLabel").grid(
+            row=2, column=0, sticky=tk.W, pady=5
+        )
+        self.email_entry = ttk.Entry(frame, width=35)
+        self.email_entry.grid(row=2, column=1, pady=5, padx=5)
 
-            self.candidate_combobox = ttk.Combobox(
-                frame,
-                values=[f"{c.name} ({c.email})" for c in existing_candidates],
-                state="readonly",
-                width=40,
-            )
-            self.candidate_combobox.grid(row=5, column=0, columnspan=2, pady=5)
-            self._existing_candidates = existing_candidates
-
-            btn_select = ttk.Button(
-                frame, text="Selecionar Candidato", command=self.handle_select_existing
-            )
-            btn_select.grid(row=6, column=0, columnspan=2, pady=10)
+        ttk.Button(
+            frame, text="Cadastrar", command=self.handle_register,
+            style="Accent.TButton",
+        ).grid(row=3, column=0, columnspan=2, sticky=tk.W, pady=(12, 0))
 
     def handle_register(self):
         name = self.name_entry.get().strip()
         email = self.email_entry.get().strip()
         try:
             self.candidate = self.service.register_candidate(name, email)
-            messagebox.showinfo(
-                "Sucesso", f"Candidato {self.candidate.name} cadastrado com sucesso!"
-            )
-            self.create_main_interface()
-        except Exception as e:
-            messagebox.showerror("Erro de Cadastro", str(e))
-
-    def handle_select_existing(self):
-        selection = self.candidate_combobox.current()
-        if selection >= 0:
-            self.candidate = self._existing_candidates[selection]
-            self.create_main_interface()
-        else:
-            messagebox.showwarning("Aviso", "Selecione um candidato válido na lista.")
+        except ValueError as error:
+            messagebox.showerror("Erro de cadastro", str(error))
+            return
+        self.on_user_created(self.candidate)
+        self.create_main_interface()
+        messagebox.showinfo("Cadastro concluído", "O candidato foi cadastrado.")
 
     def create_main_interface(self):
         for widget in self.winfo_children():
             widget.destroy()
 
-        top_frame = ttk.Frame(self, padding=10)
-        top_frame.pack(fill=tk.X)
-
         ttk.Label(
-            top_frame,
-            text=f"Candidato: {self.candidate.name} ({self.candidate.email})",
-            font=("Arial", 11, "bold"),
-        ).pack(side=tk.LEFT)
-
-        ttk.Button(
-            top_frame, text="Trocar / Sair", command=self.create_auth_widgets
-        ).pack(side=tk.RIGHT)
+            self, text="Área do candidato", style="CardTitle.TLabel"
+        ).pack(anchor="w", pady=(0, 10))
 
         self.notebook = ttk.Notebook(self)
-        self.notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.notebook.pack(fill=tk.BOTH, expand=True)
 
         self.profile_frame = ttk.Frame(self.notebook, padding=10)
         self.notebook.add(self.profile_frame, text="Meu Perfil")
@@ -120,36 +80,37 @@ class CandidateView(tk.Frame):
 
     def init_profile_tab(self):
         lbl_frame = ttk.LabelFrame(
-            self.profile_frame, text="Atualizar Perfil Profissional", padding=15
+            self.profile_frame, text="Atualizar Perfil Profissional", padding=(12, 6)
         )
         lbl_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        lbl_frame.columnconfigure(1, weight=1)
 
-        ttk.Label(lbl_frame, text="Resumo Profissional:").grid(
-            row=0, column=0, sticky=tk.W, pady=5
+        ttk.Label(lbl_frame, text="Resumo profissional").grid(
+            row=0, column=0, sticky="nw", padx=(0, 12), pady=2
         )
-        self.summary_text = tk.Text(lbl_frame, width=55, height=4)
-        self.summary_text.grid(row=1, column=0, columnspan=2, pady=5)
+        self.summary_text = tk.Text(lbl_frame, width=1, height=3, wrap="word")
+        self.summary_text.grid(row=0, column=1, sticky="ew", pady=2)
         self.summary_text.insert("1.0", self.candidate.profile.summary)
 
-        ttk.Label(lbl_frame, text="Educação:").grid(
-            row=2, column=0, sticky=tk.W, pady=5
+        ttk.Label(lbl_frame, text="Formação").grid(
+            row=1, column=0, sticky="nw", padx=(0, 12), pady=2
         )
-        self.education_text = tk.Text(lbl_frame, width=55, height=3)
-        self.education_text.grid(row=3, column=0, columnspan=2, pady=5)
+        self.education_text = tk.Text(lbl_frame, width=1, height=2, wrap="word")
+        self.education_text.grid(row=1, column=1, sticky="ew", pady=2)
         self.education_text.insert("1.0", self.candidate.profile.education)
 
         ttk.Label(
-            lbl_frame, text="Habilidades (separadas por vírgula):"
-        ).grid(row=4, column=0, sticky=tk.W, pady=5)
-        self.skills_entry = ttk.Entry(lbl_frame, width=57)
-        self.skills_entry.grid(row=5, column=0, columnspan=2, pady=5)
+            lbl_frame, text="Habilidades\n(separadas por vírgula)"
+        ).grid(row=2, column=0, sticky=tk.W, padx=(0, 12), pady=2)
+        self.skills_entry = ttk.Entry(lbl_frame)
+        self.skills_entry.grid(row=2, column=1, sticky="ew", pady=2)
         self.skills_entry.insert(
             0, ", ".join(self.candidate.profile.skills)
         )
 
         ttk.Button(
             lbl_frame, text="Salvar Alterações do Perfil", command=self.save_profile
-        ).grid(row=6, column=0, columnspan=2, pady=15)
+        ).grid(row=3, column=0, columnspan=2, sticky=tk.W, pady=(8, 0))
 
     def save_profile(self):
         summary = self.summary_text.get("1.0", tk.END).strip()
@@ -160,12 +121,11 @@ class CandidateView(tk.Frame):
         try:
             self.candidate.update_profile(summary, education, skills)
             messagebox.showinfo("Sucesso", "Perfil profissional atualizado com sucesso!")
-        except Exception as e:
+        except (ValueError, PermissionError) as e:
             messagebox.showerror("Erro", str(e))
 
     def init_vacancies_tab(self):
         frame = ttk.Frame(self.vacancies_frame, padding=5)
-        frame.pack(fill=tk.BOTH, expand=True)
 
         columns = ("title", "company", "deadline", "description")
         self.vacancies_tree = ttk.Treeview(
@@ -190,7 +150,7 @@ class CandidateView(tk.Frame):
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         btn_frame = ttk.Frame(self.vacancies_frame, padding=5)
-        btn_frame.pack(fill=tk.X, pady=5)
+        btn_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=5)
 
         ttk.Button(
             btn_frame, text="Atualizar Lista", command=self.load_vacancies
@@ -198,6 +158,7 @@ class CandidateView(tk.Frame):
         ttk.Button(
             btn_frame, text="Candidatar-se à Vaga Selecionada", command=self.apply_vacancy
         ).pack(side=tk.LEFT, padx=5)
+        frame.pack(fill=tk.BOTH, expand=True)
 
         self._vacancies_map = {}
         self.load_vacancies()
@@ -237,12 +198,11 @@ class CandidateView(tk.Frame):
             self.candidate.apply_to(vacancy, today)
             messagebox.showinfo("Sucesso", f"Candidatura realizada para a vaga: {vacancy.title}!")
             self.load_applications()
-        except Exception as e:
+        except (ValueError, PermissionError) as e:
             messagebox.showerror("Erro ao candidatar-se", str(e))
 
     def init_applications_tab(self):
         frame = ttk.Frame(self.applications_frame, padding=5)
-        frame.pack(fill=tk.BOTH, expand=True)
 
         columns = ("title", "company", "registered_on", "status")
         self.applications_tree = ttk.Treeview(
@@ -267,7 +227,7 @@ class CandidateView(tk.Frame):
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         btn_frame = ttk.Frame(self.applications_frame, padding=5)
-        btn_frame.pack(fill=tk.X, pady=5)
+        btn_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=5)
 
         ttk.Button(
             btn_frame, text="Atualizar Candidaturas", command=self.load_applications
@@ -275,6 +235,7 @@ class CandidateView(tk.Frame):
         ttk.Button(
             btn_frame, text="Cancelar Candidatura Selecionada", command=self.cancel_application
         ).pack(side=tk.LEFT, padx=5)
+        frame.pack(fill=tk.BOTH, expand=True)
 
         self._applications_map = {}
         self.load_applications()
@@ -286,21 +247,21 @@ class CandidateView(tk.Frame):
 
         try:
             applications = self.candidate.list_applications()
-            for app in applications:
-                status_name = app.status.name
-                item_id = self.applications_tree.insert(
-                    "",
-                    tk.END,
-                    values=(
-                        app.vacancy.title,
-                        app.vacancy.company.name,
-                        app.registered_on.strftime("%d/%m/%Y"),
-                        status_name,
-                    ),
-                )
-                self._applications_map[item_id] = app
-        except Exception:
-            pass
+        except PermissionError as error:
+            messagebox.showerror("Erro ao consultar candidaturas", str(error))
+            return
+        for app in applications:
+            item_id = self.applications_tree.insert(
+                "",
+                tk.END,
+                values=(
+                    app.vacancy.title,
+                    app.vacancy.company.name,
+                    app.registered_on.strftime("%d/%m/%Y"),
+                    APPLICATION_STATUS_LABELS[app.status],
+                ),
+            )
+            self._applications_map[item_id] = app
 
     def cancel_application(self):
         selected = self.applications_tree.selection()
@@ -319,5 +280,5 @@ class CandidateView(tk.Frame):
                 self.candidate.cancel_application(app)
                 messagebox.showinfo("Sucesso", "Candidatura cancelada com sucesso.")
                 self.load_applications()
-            except Exception as e:
+            except (ValueError, PermissionError) as e:
                 messagebox.showerror("Erro ao cancelar", str(e))
